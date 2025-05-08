@@ -1,7 +1,7 @@
+# Fixed imports
 from pxr import Usd, Sdf
 import logging
 import os
-import spark
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.functions import col, udf, lit
@@ -9,27 +9,32 @@ from pyspark.sql.types import StringType
 from fuzzywuzzy import fuzz
 
 class OpenUSDToolkit:
+    """
+    Toolkit for working with OpenUSD files in Microsoft Fabric
+    """
 
-    # Helper function to flatten complex types like dictionaries and lists
+    @staticmethod
     def flatten_value(value):
+        """Helper function to flatten complex types like dictionaries and lists"""
         if isinstance(value, dict):
-            return ', '.join(f"{k}: {v}" for k, v in value.items())  # Ensure key-value pairs are clear
+            return ', '.join(f"{k}: {v}" for k, v in value.items())
         elif isinstance(value, list):
             return ', '.join(map(str, value))
         else:
             return str(value)
         
-    # Takes in a USD file and returns a DataFrame with metadata
-    def read_usd_metadata(usd_file, spark: SparkSession):
-        # Open the USD stage lazily, loading only the necessary payloads
+    @staticmethod
+    def read_usd_metadata(usd_file, spark):
+        """Takes in a USD file and returns a DataFrame with metadata"""
+        # Open the USD stage
         stage = Usd.Stage.Open(usd_file, Usd.Stage.LoadAll)
 
         # Extract root layer metadata
         root_layer = stage.GetRootLayer()
         layer_metadata = {
-            "identifier": root_layer.identifier,  # Unique identifier for the layer
-            "version": root_layer.version,  # Version of the layer
-            "subLayers": root_layer.subLayerPaths,  # List of sub-layers in the root layer
+            "identifier": root_layer.identifier,
+            "version": root_layer.version,
+            "subLayers": root_layer.subLayerPaths,
         }
 
         # Extract stage-level metadata
@@ -46,10 +51,10 @@ class OpenUSDToolkit:
             if prim.GetTypeName() == "Xform":  # Only include "Xform" types
                 prim_metadata[prim.GetPath().pathString] = {"type": "Xform"}
 
-        # Prepare the data to be flattened (Only the prim metadata is needed)
+        # Prepare the data to be flattened
         flattened_data = []
         for asset_path, metadata_dict in prim_metadata.items():
-            flattened_data.append(("prim_metadata", asset_path, OpenUSDImport.flatten_value(metadata_dict)))
+            flattened_data.append(("prim_metadata", asset_path, OpenUSDToolkit.flatten_value(metadata_dict)))
 
         # Convert the flattened data into a DataFrame
         df = spark.createDataFrame(flattened_data, ['metadata_type', 'metadata_key', 'metadata_value'])
@@ -68,9 +73,10 @@ class OpenUSDToolkit:
         # Return the transformed DataFrame
         return df_new
         
-    # Takes in two data frames and runs a fuzzy match on them
-    def fuzzy_match_usd_assets(spark: SparkSession, df_usd_metadata, df_asset_data, threshold=80):
-        # Collect the asset IDs from df_asset_data to the driver (assuming it's small enough)
+    @staticmethod
+    def fuzzy_match_usd_assets(spark, df_usd_metadata, df_asset_data, threshold=80):
+        """Takes in two data frames and runs a fuzzy match on them"""
+        # Collect the asset IDs from df_asset_data to the driver
         asset_list = df_asset_data.select("AssetID").rdd.flatMap(lambda x: x).collect()
         
         # Broadcast the asset list
@@ -111,33 +117,16 @@ class OpenUSDToolkit:
 
         return result_df
 
-    # Kicks off a GitOps job to run a contextualization job on DTB
+    @staticmethod
     def exact_match_usd_assets(df_usd_metadata, df_asset_data):
-        """
-        Perform exact matching on USD assets based on contextualization results.
+        """Perform exact matching on USD assets based on contextualization results"""
+        # This function needs implementation
+        # Return placeholder for now
+        return None
         
-        Args:
-            df_usd (DataFrame): DataFrame containing USD asset information with columns 'sourcePath' and 'AssetID'
-            df_asset_data (DataFrame): DataFrame containing asset data with columns 'sourcePath' and 'AssetID'
-            
-        Returns:
-            DataFrame: DataFrame with matched USD assets
-        """
-        
-        return df_matched
-        
-    # This is only applicable for exact matching. Writes a new table ContextualizationResults to the Lakehouse.
+    @staticmethod
     def process_contextualization_job_results(dtdm_name, lakehouse_name):
-        """
-        Process contextualization data from a specified DTDM and save results to a specified Lakehouse.
-        
-        Args:
-            dtdm_name (str): Name of the DTDM source containing entityinstance and relationshipinstance tables
-            lakehouse_name (str): Name of the Lakehouse where results will be saved
-            
-        Returns:
-            DataFrame: The contextualization results DataFrame
-        """
+        """Process contextualization data from a specified DTDM and save results to a specified Lakehouse"""
         spark = SparkSession.builder.getOrCreate()
         
         try:
@@ -179,18 +168,9 @@ class OpenUSDToolkit:
                 print(f"An error occurred: {str(e)}")
             return None
 
-    # TODO: Need to write another function that enriches the SAME USD file with the PALAssetID attribute.
-    # This function will take in the USD file path, the output file path, and the DataFrame with contextualization results.
+    @staticmethod
     def enrich_usd_with_dtb_assets(usd_file_path, output_usd_file_path, df_usd_metadata, result_df):
-        """
-        Enrich USD file with DTB_ID attributes based on fuzzy-matched results.
-
-        Args:
-            usd_file_path (str): Input USD file path.
-            output_usd_file_path (str): Output path for enriched USD file.
-            df_usd_metadata (DataFrame): DataFrame with 'sourcePath' and 'USDAssetID'.
-            result_df (DataFrame): DataFrame with 'USDAssetID' and 'DTBAssetID' (from fuzzy match).
-        """
+        """Enrich USD file with DTB_ID attributes based on fuzzy-matched results"""
         # Join metadata and fuzzy match results
         df_matched = df_usd_metadata.join(
             result_df,
@@ -222,7 +202,9 @@ class OpenUSDToolkit:
         print(f"✅ Enriched USD file saved to: {output_usd_file_path}")
         print(f"🔧 Total prims enriched with DTB_ID: {count}")
 
-    def print_usd_file_details(usd_file_path: str):
+    @staticmethod
+    def print_usd_file_details(usd_file_path):
+        """Print detailed information about a USD file"""
         # Open the USD file
         stage = Usd.Stage.Open(usd_file_path)
 

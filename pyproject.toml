@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openusd-msfabric-toolkit"
+version = "0.1.0"
+description = "A Python package to import, enrich, and contextualize OpenUSD data using Spark on Microsoft Fabric Notebooks"
+authors = [
+  { name="Vindhya Banda", email="vindhyabanda@microsoft.com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+
+dependencies = [
+    "pyspark>=3.3",
+    "fuzzywuzzy",
+    "python-Levenshtein",  # Optional, speeds up fuzzywuzzy
+    "usd-core"
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/openusd-toolkit"

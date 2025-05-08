@@ -8,7 +8,7 @@ from pyspark.sql.functions import col, udf, lit
 from pyspark.sql.types import StringType
 from fuzzywuzzy import fuzz
 
-class OpenUSDImport:
+class OpenUSDToolkit:
 
     # Helper function to flatten complex types like dictionaries and lists
     def flatten_value(value):

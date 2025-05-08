@@ -1,3 +1,3 @@
-from openusd_msfabric_toolkit.openusd_import import OpenUSDImport
+from .openusd_msfabric_toolkit import OpenUSDToolkit
 
-__all__ = ["OpenUSDImport"]
+__all__ = ["OpenUSDToolkit"]

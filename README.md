@@ -11,5 +11,7 @@ This package provides utilities for working with [OpenUSD](https://openusd.org/)
 
 ## Installation
 
-```bash
-pip install git+https://github.com/yourusername/openusd-toolkit.git
+1. Clone this repository.
+2. Run `python -m build --wheel`
+3. Upload the `.whl` file to your environment.
+4. Run `pip install /lakehouse/default/Files/openusd_msfabric_toolkit-0.1.0-py3-none-any.whl --quiet` to use the package in your environment.

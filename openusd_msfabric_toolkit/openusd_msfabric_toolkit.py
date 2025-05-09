@@ -74,10 +74,24 @@ class OpenUSDToolkit:
         return df_new
         
     @staticmethod
-    def fuzzy_match_usd_assets(spark, df_usd_metadata, df_asset_data, threshold=80):
-        """Takes in two data frames and runs a fuzzy match on them"""
+    def fuzzy_match_usd_assets(spark, df_usd_metadata, df_asset_data, asset_id_col="AssetID", threshold=80):
+        """
+        Takes in two data frames and runs a fuzzy match on them.
+        Allows dynamic specification of asset ID column names.
+        
+        Parameters:
+        - spark: SparkSession
+        - df_usd_metadata: DataFrame with USD metadata
+        - df_asset_data: DataFrame with asset information
+        - usd_id_col: column in df_usd_metadata to match from (default "USDAssetID")
+        - asset_id_col: column in df_asset_data to match to (default "AssetID")
+        - threshold: minimum fuzzy match score to consider a valid match
+        """
+        # This is hardcoded by the read_usd_metadata function
+        usd_id_col="USDAssetID"
+
         # Collect the asset IDs from df_asset_data to the driver
-        asset_list = df_asset_data.select("AssetID").rdd.flatMap(lambda x: x).collect()
+        asset_list = df_asset_data.select(asset_id_col).rdd.flatMap(lambda x: x).collect()
         
         # Broadcast the asset list
         broadcast_assets = spark.sparkContext.broadcast(asset_list)
@@ -96,15 +110,15 @@ class OpenUSDToolkit:
         fuzzy_udf = udf(get_best_match, StringType())
 
         # Apply the UDF to create the match
-        matched_df = df_usd_metadata.withColumn("DTBAssetID", fuzzy_udf(col("USDAssetID")))
+        matched_df = df_usd_metadata.withColumn("DTBAssetID", fuzzy_udf(col(usd_id_col)))
 
         # Get successful matches
         result_df = matched_df.filter(col("DTBAssetID").isNotNull()) \
-                            .select("USDAssetID", "DTBAssetID")
+                            .select(col(usd_id_col).alias("USDAssetID"), "DTBAssetID")
 
         # Get non-matches
         unmatched_df = matched_df.filter(col("DTBAssetID").isNull()) \
-                                .select("USDAssetID")
+                                .select(usd_id_col)
         
         # Collect and print unmatched USDAssetIDs
         unmatched_list = unmatched_df.rdd.flatMap(lambda x: x).collect()
@@ -116,6 +130,7 @@ class OpenUSDToolkit:
             print("✅ All USDAssetIDs successfully matched.")
 
         return result_df
+
 
     @staticmethod
     def exact_match_usd_assets(df_usd_metadata, df_asset_data):
@@ -203,8 +218,13 @@ class OpenUSDToolkit:
         print(f"🔧 Total prims enriched with DTB_ID: {count}")
 
     @staticmethod
-    def print_usd_file_details(usd_file_path):
-        """Print detailed information about a USD file"""
+    def print_usd_file_details(usd_file_path, onlyDTBID=False):
+        """Print detailed information about a USD file.
+        
+        Parameters:
+        - usd_file_path: Path to the USD file.
+        - onlyDTBID: If True, only print prims that have the 'DTB_ID' attribute.
+        """
         # Open the USD file
         stage = Usd.Stage.Open(usd_file_path)
 
@@ -223,6 +243,13 @@ class OpenUSDToolkit:
             return
 
         for prim in xform_prims:
+            attributes = prim.GetAttributes()
+            has_dtb_id = any(attr.GetName() == "DTB_ID" for attr in attributes)
+
+            # If the onlyDTBID flag is set, skip prims without the DTB_ID attribute
+            if onlyDTBID and not has_dtb_id:
+                continue
+
             print(f"🔹 Prim Path: {prim.GetPath()}")
 
             # Metadata
@@ -235,7 +262,6 @@ class OpenUSDToolkit:
                 print("📌 Metadata: None")
 
             # Attributes
-            attributes = prim.GetAttributes()
             if attributes:
                 print("🔧 Attributes:")
                 for attr in attributes:

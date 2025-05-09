@@ -1,4 +1,4 @@
-# OpenUSD Toolkit
+# OpenUSD Data Contextualization Toolkit
 
 This package provides utilities for working with [OpenUSD](https://openusd.org/) files in Microsoft Fabric Notebooks, including metadata extraction, fuzzy matching with external asset tables, and enrichment of USD files.
 

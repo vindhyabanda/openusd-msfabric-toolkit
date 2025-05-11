@@ -15,8 +15,7 @@ requires-python = ">=3.8"
 
 dependencies = [
     "pyspark>=3.3",
-    "fuzzywuzzy",
-    "python-Levenshtein",  # Optional, speeds up fuzzywuzzy
+    "thefuzz"
     "usd-core"
 ]
 

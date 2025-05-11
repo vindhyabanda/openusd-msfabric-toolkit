@@ -1,4 +1,4 @@
 pyspark>=3.3
-fuzzywuzzy
+thefuzz
 python-Levenshtein
 usd-core

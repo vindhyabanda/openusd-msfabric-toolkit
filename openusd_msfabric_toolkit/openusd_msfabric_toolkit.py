@@ -6,7 +6,7 @@ from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 from pyspark.sql.functions import col, udf, lit
 from pyspark.sql.types import StringType
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 class OpenUSDToolkit:
     """
@@ -24,7 +24,7 @@ class OpenUSDToolkit:
             return str(value)
         
     @staticmethod
-    def read_usd_metadata(usd_file, spark):
+    def read_usd_metadata(spark, usd_file):
         """Takes in a USD file and returns a DataFrame with metadata"""
         # Open the USD stage
         stage = Usd.Stage.Open(usd_file, Usd.Stage.LoadAll)
@@ -72,9 +72,42 @@ class OpenUSDToolkit:
 
         # Return the transformed DataFrame
         return df_new
+
+    @staticmethod
+    def read_entity_instances(spark, dtbname, entityname):
+        """Read entity instances from a specified DTB an entity name
+        Parameters:
+        - spark: SparkSession
+        - dtbname: Name of DTB Item to query frpom
+        - entityname: Name of Entity to retrieve list.  
+        """
+        try:
+            # Query the entity instances from the DTB
+            query = f"""
+            SELECT ei.EntityInstanceDisplayId
+            FROM {dtbname}dtdm.entitytype et
+            JOIN {dtbname}dtdm.entityinstance ei
+            ON et.ID = ei.EntityTypeId
+            WHERE et.Name = '{entityname}'
+            """
+            df = spark.sql(query)
+
+            # Create a temporary view for SQL queries
+            df.createOrReplaceTempView(entityname)
+
+            # Return the DataFrame
+            return df
+
+        except Exception as e:
+            if "Table or view not found" in str(e):
+                print(f"Error: The DTB '{dtbname}' was not found or is not connected.")
+                print("Please connect the DTB data source to this notebook before proceeding.")
+            else:
+                print(f"An error occurred: {str(e)}")
+            return None
         
     @staticmethod
-    def fuzzy_match_usd_assets(spark, df_usd_metadata, df_asset_data, asset_id_col="AssetID", threshold=80):
+    def fuzzy_match_usd_assets(spark, df_usd_metadata, df_asset_data, asset_id_col="EntityInstanceDisplayId", threshold=80):
         """
         Takes in two data frames and runs a fuzzy match on them.
         Allows dynamic specification of asset ID column names.

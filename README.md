@@ -12,6 +12,8 @@ This package provides utilities for working with [OpenUSD](https://openusd.org/)
 ## Installation
 
 1. Clone this repository.
-2. Run `python -m build --wheel`
-3. Upload the `.whl` file to your environment.
-4. Run `pip install /lakehouse/default/Files/openusd_msfabric_toolkit-0.1.0-py3-none-any.whl --quiet` to use the package in your environment.
+2. Run `pip install -r requirements.txt` to install dependencies.
+3. Run `pip install build wheel setuptools` to install dependencies needed for build.
+4. Run `python -m build --wheel`
+5. Upload the `.whl` file to your environment.
+6. Run `pip install /lakehouse/default/Files/openusd_msfabric_toolkit-0.1.0-py3-none-any.whl --quiet` to use the package in your environment.
